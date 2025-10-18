@@ -1,0 +1,28 @@
+/* 自定义工具类 */
+@layer utilities {
+    .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .transition-custom {
+        transition: all 0.3s ease;
+    }
+}
+
+/* 全局样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #f9fafb;
+    color: #1f2937;
+}
+
+/* 设置span元素为深色 */
+span {
+    color: #1a202c;
+    font-weight: 500;
+}
