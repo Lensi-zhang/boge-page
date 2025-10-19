@@ -11,7 +11,7 @@
           探索思想，记录生活
         </h1>
         <p class="text-[clamp(1.1rem,2vw,1.3rem)] text-gray-600 mb-8">
-          欢迎来到我的个人博客，这里分享我的思考、学习和生活点滴
+          欢迎来到博格，这里分享思考、学习和生活点滴
         </p>
         <a href="#articles" class="inline-block bg-primary hover:bg-primary/90 text-white font-medium px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-custom transform hover:-translate-y-1">
           浏览文章

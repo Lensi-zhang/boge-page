@@ -1,6 +1,6 @@
-# Boge 博客 (Vue 3 版)
+# Boge 博格 (Vue 3 版)
 
-这是一个使用 Vue 3 构建的个人博客网站。
+这是一个使用 Vue 3 构建的个人博格网站。
 
 ## 项目结构
 
@@ -13,10 +13,10 @@
 ├── components/        # Vue组件目录
 │   ├── Header.vue     # 导航栏组件
 │   ├── Hero.vue       # 英雄区域组件
-│   ├── About.vue      # 关于我组件
-│   ├── BlogIntro.vue  # 博客简介组件
+│   ├── About.vue      # 关于开发者组件
+│   ├── BlogIntro.vue  # 博格简介组件
 │   ├── Articles.vue   # 文章组件
-│   ├── Contact.vue    # 联系我组件
+│   ├── Contact.vue    # 联系开发者组件
 │   ├── Footer.vue     # 页脚组件
 │   └── BackToTop.vue  # 返回顶部组件
 ├── package.json       # 项目配置和依赖

@@ -14,11 +14,11 @@ dotenv.config();
 const mockArticles = [
   {
     _id: '1',
-    title: '欢迎来到我的博客',
-    content: '<h2>这是第一篇博客文章</h2><p>欢迎访问我的个人博客网站！这里将分享我的技术学习心得和项目经验。</p>',
-    summary: '博客开篇，介绍网站的主要内容和目的。',
+    title: '欢迎来到我的博格',
+    content: '<h2>这是第一篇博格文章</h2><p>欢迎访问博格网站！这里将分享技术学习心得和项目经验。</p>',
+    summary: '博格开篇，介绍网站的主要内容和目的。',
     category: '公告',
-    tags: ['博客', '欢迎', '介绍'],
+    tags: ['博格', '欢迎', '介绍'],
     coverImage: '',
     author: { username: 'admin' },
     isPublished: true,
@@ -54,7 +54,7 @@ const mockNavigation = [
   },
   {
     _id: '2',
-    title: '博客',
+    title: '博格',
     path: '/blog',
     icon: 'article',
     order: 2,
@@ -72,7 +72,7 @@ const mockNavigation = [
   },
   {
     _id: '4',
-    title: '联系我们',
+    title: '联系开发者',
     path: '/contact',
     icon: 'message',
     order: 4,
@@ -108,11 +108,18 @@ if (process.env.NODE_ENV === 'development') {
 // 静态文件服务
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// API路由配置（使用MariaDB版本）
-app.use('/api/users', userRoutes);
-app.use('/api/articles', mariaArticleRoutes);
-app.use('/api/navigation', navigationRoutes);
-useMockData = false; // 强制使用真实路由
+// API路由配置
+if (!useMockData) {
+  try {
+    app.use('/api/users', userRoutes);
+    app.use('/api/articles', mariaArticleRoutes);
+    app.use('/api/navigation', navigationRoutes);
+    console.log('Using real database routes');
+  } catch (error) {
+    console.warn('Failed to initialize real routes:', error.message);
+    useMockData = true;
+  }
+}
 
 // 如果需要使用模拟数据
 if (useMockData) {
@@ -152,6 +159,44 @@ if (useMockData) {
       res.json(article);
     } else {
       res.status(404).json({ message: 'Article not found' });
+    }
+  });
+  
+  // 添加新文章
+  app.post('/api/articles', (req, res) => {
+    const { title, category, summary, content } = req.body;
+    
+    if (!title || !category || !summary || !content) {
+      return res.status(400).json({ message: '所有字段都是必填的' });
+    }
+    
+    const newArticle = {
+      _id: Date.now().toString(),
+      title,
+      category,
+      summary,
+      content,
+      tags: [],
+      coverImage: '',
+      author: { username: 'admin' },
+      isPublished: true,
+      viewCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    mockArticles.unshift(newArticle);
+    res.status(201).json(newArticle);
+  });
+  
+  // 删除文章
+  app.delete('/api/articles/:id', (req, res) => {
+    const index = mockArticles.findIndex(a => a._id === req.params.id);
+    if (index !== -1) {
+      mockArticles.splice(index, 1);
+      res.json({ message: '文章删除成功' });
+    } else {
+      res.status(404).json({ message: '文章不存在' });
     }
   });
   

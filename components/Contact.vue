@@ -2,9 +2,9 @@
   <section id="contact" class="py-20 bg-gradient-to-br from-primary/5 to-secondary/5">
     <div class="container mx-auto px-4">
       <div class="max-w-3xl mx-auto text-center">
-        <h2 class="text-[clamp(1.8rem,3vw,2.5rem)] font-bold mb-6">联系我</h2>
+        <h2 class="text-[clamp(1.8rem,3vw,2.5rem)] font-bold mb-6">联系开发者</h2>
         <p class="text-gray-600 mb-12">
-          如果你有任何问题、建议或者合作意向，欢迎通过以下方式联系我
+          如果你有任何问题、建议或者合作意向，欢迎通过以下方式联系开发者
         </p>
         
         <div class="flex flex-wrap justify-center gap-10">

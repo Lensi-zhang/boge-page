@@ -59,7 +59,7 @@ const initNavigationItems = async () => {
           isActive: true,
         },
         {
-          title: '博客',
+          title: '博格',
           path: '/blog',
           icon: 'article',
           order: 2,
@@ -73,7 +73,7 @@ const initNavigationItems = async () => {
           isActive: true,
         },
         {
-          title: '联系我们',
+          title: '联系开发者',
           path: '/contact',
           icon: 'message',
           order: 4,
@@ -99,11 +99,11 @@ const initSampleArticles = async (adminId) => {
     if (articleCount === 0 && adminId) {
       const articles = [
         {
-          title: '欢迎来到我的博客',
-          content: '<h2>这是第一篇博客文章</h2><p>欢迎访问我的个人博客网站！这里将分享我的技术学习心得和项目经验。</p>',
-          summary: '博客开篇，介绍网站的主要内容和目的。',
-          category: '公告',
-          tags: ['博客', '欢迎', '介绍'],
+            title: '欢迎来到我的博格',
+            content: '<h2>这是第一篇博格文章</h2><p>欢迎访问博格网站！这里将分享技术学习心得和项目经验。</p>',
+            summary: '博格开篇，介绍网站的主要内容和目的。',
+            category: '公告',
+            tags: ['博格', '欢迎', '介绍'],
           coverImage: '',
           author: adminId,
           isPublished: true,

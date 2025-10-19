@@ -10,24 +10,34 @@
     </div>
     
     <!-- 控制端登录页面 -->
-    <div v-else-if="showAdminLogin">
-      <AdminLogin @login-success="handleLoginSuccess" />
-    </div>
+      <div v-else-if="showAdminLogin">
+        <!-- 非管理员用户只要进入管理员登录界面就显示权限提示 -->
+        <AdminLogin 
+          @login-success="handleLoginSuccess"
+          :show-permission-alert="true"
+        />
+      </div>
     
     <!-- 普通用户视图 -->
     <div v-else>
-      <Header @show-admin-login="showAdminLogin = true" />
+      <Header @show-admin-login="handleShowAdminLogin" @show-article-form="showArticleFormDialog" />
       <main>
         <Hero v-if="isNavVisible('hero')" />
         <About v-if="isNavVisible('about')" />
         <BlogIntro v-if="isNavVisible('blogIntro')" />
         <Articles ref="articlesRef" v-if="isNavVisible('articles')" />
-        <ArticleForm 
-          v-if="isNavVisible('articleForm')" 
-          @article-published="handleArticlePublished" 
-        />
         <Contact v-if="isNavVisible('contact')" />
       </main>
+      
+      <!-- 发布文章对话框 -->
+      <div v-if="showArticleForm" class="article-form-modal-overlay" @click="closeArticleForm">
+        <div class="article-form-modal" @click.stop>
+          <button class="article-form-close" @click="closeArticleForm">
+            <i class="fa fa-times" aria-hidden="true"></i>
+          </button>
+          <ArticleForm @article-published="handleArticlePublished" />
+        </div>
+      </div>
       <Footer />
       <BackToTop />
     </div>
@@ -35,17 +45,18 @@
 </template>
 
 <script>
-import Header from './components/Header.vue'
-import Hero from './components/Hero.vue'
-import About from './components/About.vue'
-import BlogIntro from './components/BlogIntro.vue'
-import Articles from './components/Articles.vue'
-import ArticleForm from './components/ArticleForm.vue'
-import Contact from './components/Contact.vue'
-import Footer from './components/Footer.vue'
-import BackToTop from './components/BackToTop.vue'
-import AdminLogin from './components/AdminLogin.vue'
-import AdminPanel from './components/AdminPanel.vue'
+// 使用懒加载导入组件，提高初始加载速度
+const Header = () => import('./components/Header.vue')
+const Hero = () => import('./components/Hero.vue')
+const About = () => import('./components/About.vue')
+const BlogIntro = () => import('./components/BlogIntro.vue')
+const Articles = () => import('./components/Articles.vue')
+const ArticleForm = () => import('./components/ArticleForm.vue')
+const Contact = () => import('./components/Contact.vue')
+const Footer = () => import('./components/Footer.vue')
+const BackToTop = () => import('./components/BackToTop.vue')
+const AdminLogin = () => import('./components/AdminLogin.vue')
+const AdminPanel = () => import('./components/AdminPanel.vue')
 
 export default {
   name: 'App',
@@ -63,18 +74,19 @@ export default {
     AdminPanel
   },
   data() {
-    return {
-      showAdminLogin: false,
-      showAdminPanel: false,
-      navigationSettings: [
-        { id: 'hero', name: '首页横幅', visible: true },
-        { id: 'about', name: '关于我们', visible: true },
-        { id: 'blogIntro', name: '博客介绍', visible: true },
-        { id: 'articles', name: '文章列表', visible: true },
-        { id: 'articleForm', name: '发布文章', visible: true },
-        { id: 'contact', name: '联系我们', visible: true }
-      ]
-    }
+      return {
+        showAdminLogin: false,
+        showAdminPanel: false,
+        showArticleForm: false,
+        adminLoginSource: {}, // 保存管理员登录界面的触发来源
+        navigationSettings: [
+          { id: 'hero', name: '首页横幅', visible: true },
+          { id: 'about', name: '关于开发者', visible: true },
+          { id: 'blogIntro', name: '博格介绍', visible: true },
+          { id: 'articles', name: '文章列表', visible: true },
+          { id: 'contact', name: '联系开发者', visible: true }
+        ]
+      }
   },
   mounted() {
     // 检查是否已登录
@@ -91,11 +103,32 @@ export default {
     window.removeEventListener('popstate', this.checkLoginStatus);
   },
   methods: {
-    checkLoginStatus() {
-      const isLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+      handleShowAdminLogin(options = {}) {
+        // 根据传入的选项决定是否显示权限提示
+        this.showAdminLogin = true;
+        // 保存触发来源信息，供后续使用
+        this.adminLoginSource = options;
+      },
+      showArticleFormDialog() {
+        // 直接显示文章表单，因为登录状态检查已在 Header 组件中完成
+        this.showArticleForm = true;
+      },
+      closeArticleForm() {
+        this.showArticleForm = false;
+      },
+      checkLoginStatus() {
+      const adminLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+      const userLoggedIn = localStorage.getItem('userLoggedIn') === 'true';
       
-      // 如果已登录，直接显示管理面板
-      if (isLoggedIn) {
+      // 如果是普通用户登录，重定向到首页
+      if (userLoggedIn && !adminLoggedIn) {
+        this.showAdminPanel = false;
+        this.showAdminLogin = false;
+        return;
+      }
+      
+      // 如果是管理员已登录，显示管理面板
+      if (adminLoggedIn) {
         this.showAdminPanel = true;
         this.showAdminLogin = false;
       } else {
@@ -127,6 +160,8 @@ export default {
       // 确保登录状态保存到localStorage（在AdminLogin.vue中已实现）
       this.showAdminLogin = false;
       this.showAdminPanel = true;
+      // 强制刷新页面以确保所有状态正确加载
+      window.location.href = '/';
     },
     
     handleLogout() {
@@ -153,4 +188,61 @@ export default {
 
 <style>
 /* 全局样式已在style.css中定义 */
+
+/* 发布文章对话框样式 */
+.article-form-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.article-form-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.article-form-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.article-form-close:hover {
+  color: #333;
+  background-color: #f0f0f0;
+}
+
+@media (max-width: 768px) {
+  .article-form-modal-overlay {
+    padding: 10px;
+  }
+  
+  .article-form-modal {
+    max-height: 95vh;
+    margin: 10px;
+  }
+}
 </style>

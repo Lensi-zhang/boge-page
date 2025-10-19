@@ -19,7 +19,7 @@
         
         <!-- 文章列表 -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-          <div v-for="article in articles" :key="article.id" class="bg-gray-50 rounded-lg overflow-hidden shadow hover:shadow-md transition-shadow">
+          <div v-for="article in displayedArticles" :key="article.id" class="bg-gray-50 rounded-lg overflow-hidden shadow hover:shadow-md transition-shadow" :class="{ 'featured-article': featuredSettings.featuredArticles.includes(article.id) }">
             <div class="p-6">
               <span class="inline-block bg-primary/10 text-primary text-xs px-3 py-1 rounded-full mb-3">{{ article.category }}</span>
               <h3 class="text-xl font-bold mb-2">{{ article.title }}</h3>
@@ -69,21 +69,106 @@ export default {
   data() {
     return {
       articles: [],
+      displayedArticles: [],
       isLoading: false,
       showModal: false,
       selectedArticle: null,
       currentPage: 1,
-      pageSize: 6
+      pageSize: 6,
+      featuredSettings: {
+        displayCount: 3,
+        featuredArticles: []
+      }
     }
   },
   mounted() {
-    this.fetchArticles();
+    // 使用防抖函数延迟执行初始加载，避免页面阻塞
+    setTimeout(() => {
+      this.fetchArticles();
+      this.loadFeaturedSettings();
+    }, 100);
+    
+    // 监听localStorage变化，更新文章列表
+    window.addEventListener('storage', this.handleStorageChange);
   },
+  
+  beforeUnmount() {
+    // 移除事件监听器，避免内存泄漏
+    window.removeEventListener('storage', this.handleStorageChange);
+  },
+  
+  watch: {
+    articles() {
+      // 当文章列表更新时，重新应用最新文章设置
+      this.applyFeaturedSettings();
+    },
+    featuredSettings() {
+      // 当设置更新时，重新应用
+      this.applyFeaturedSettings();
+    }
+  },
+  
   methods: {
+      loadFeaturedSettings() {
+        try {
+          // 从localStorage加载最新文章设置
+          const savedSettings = localStorage.getItem('featuredArticlesSettings');
+          if (savedSettings) {
+            this.featuredSettings = JSON.parse(savedSettings);
+          }
+        } catch (error) {
+          console.error('加载最新文章设置失败:', error);
+        }
+      },
+      
+      applyFeaturedSettings() {
+        // 获取所有已批准文章的副本
+        let allArticles = [...this.articles].filter(article => 
+          article.approvalStatus === 'approved' || !article.approvalStatus
+        );
+        
+        // 分离置顶文章和普通文章
+        const featuredArticles = [];
+        const regularArticles = [];
+        
+        allArticles.forEach(article => {
+          if (this.featuredSettings.featuredArticles.includes(article.id)) {
+            featuredArticles.push(article);
+          } else {
+            regularArticles.push(article);
+          }
+        });
+        
+        // 按置顶文章的选择顺序排序
+        featuredArticles.sort((a, b) => {
+          const indexA = this.featuredSettings.featuredArticles.indexOf(a.id);
+          const indexB = this.featuredSettings.featuredArticles.indexOf(b.id);
+          return indexA - indexB;
+        });
+        
+        // 合并置顶文章和普通文章，并限制显示数量
+        this.displayedArticles = [...featuredArticles, ...regularArticles]
+          .slice(0, this.featuredSettings.displayCount);
+      },
     async fetchArticles() {
+      // 检查是否有缓存数据且缓存未过期（5分钟内）
+      const cacheKey = `articles_cache_page_${this.currentPage}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
+      const cacheTime = 5 * 60 * 1000; // 5分钟缓存时间
+      
+      // 如果有有效缓存且是第一页，直接使用缓存数据
+      if (cachedData && cacheTimestamp && Date.now() - cacheTimestamp < cacheTime && this.currentPage === 1) {
+        const approvedArticles = JSON.parse(cachedData);
+        this.articles = approvedArticles;
+        this.applyFeaturedSettings();
+        return;
+      }
+      
+      // 否则发起请求
       this.isLoading = true;
       try {
-        // 实际的API调用
+        // 使用相对路径，通过Vite代理转发到后端服务
         const response = await fetch(`/api/articles?page=${this.currentPage}&pageSize=${this.pageSize}`);
         
         if (!response.ok) {
@@ -92,16 +177,37 @@ export default {
         
         const data = await response.json();
         
-        // 假设API返回的数据格式为 { articles: [...] }
+        // 处理文章数据，适配模拟数据格式
+        const formattedArticles = (data.articles || []).map(article => ({
+          id: article._id,
+          title: article.title,
+          summary: article.summary,
+          content: article.content,
+          category: article.category,
+          date: new Date(article.createdAt).toLocaleDateString('zh-CN'),
+          approvalStatus: article.approvalStatus || 'approved'
+        }));
+        
+        // 过滤出已批准的文章
+        const approvedArticles = formattedArticles.filter(article => 
+          article.approvalStatus === 'approved' || !article.approvalStatus
+        );
+        
         // 如果是第一页，则替换文章列表，否则追加
         if (this.currentPage === 1) {
-          this.articles = data.articles || [];
+          this.articles = approvedArticles;
+          // 缓存第一页数据
+          localStorage.setItem(cacheKey, JSON.stringify(approvedArticles));
+          localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
         } else {
-          this.articles.push(...(data.articles || []));
+          this.articles.push(...approvedArticles);
         }
+        
+        // 应用最新文章设置
+        this.applyFeaturedSettings();
       } catch (error) {
         console.error('获取文章失败:', error);
-        alert('加载文章失败，请重试');
+        // 失败时不弹出提示，避免影响用户体验
       } finally {
         this.isLoading = false;
       }
@@ -126,6 +232,29 @@ export default {
       this.selectedArticle = null;
       // 恢复页面滚动
       document.body.style.overflow = '';
+    },
+    
+    // 优化的storage事件处理函数
+    handleStorageChange(e) {
+      // 只有在当前页面不是后台标签页时才处理变化
+      if (document.visibilityState !== 'visible') return;
+      
+      // 区分不同的变化类型，只做必要的更新
+      if (e.key === 'featuredArticlesSettings') {
+        this.loadFeaturedSettings();
+        // 只重新应用设置，不需要重新获取文章
+        this.applyFeaturedSettings();
+      } else if (e.key === 'articles') {
+        // 对于文章数据变化，使用防抖处理
+        if (this._debounceTimer) clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(() => {
+          this.currentPage = 1;
+          // 清除缓存，强制获取新数据
+          localStorage.removeItem(`articles_cache_page_1`);
+          localStorage.removeItem(`articles_cache_page_1_timestamp`);
+          this.fetchArticles();
+        }, 300);
+      }
     }
   }
 }
@@ -133,4 +262,21 @@ export default {
 
 <style scoped>
 /* 组件特定样式 */
+.featured-article {
+  border: 2px solid #4CAF50;
+  position: relative;
+}
+
+.featured-article::before {
+  content: "置顶";
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #4CAF50;
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  border-bottom-left-radius: 4px;
+}
 </style>

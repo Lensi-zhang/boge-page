@@ -2,9 +2,9 @@
   <section id="blog" class="py-20 bg-gray-50">
     <div class="container mx-auto px-4">
       <div class="max-w-3xl mx-auto text-center">
-        <h2 class="text-[clamp(1.8rem,3vw,2.5rem)] font-bold mb-6">博客简介</h2>
+        <h2 class="text-[clamp(1.8rem,3vw,2.5rem)] font-bold mb-6">博格简介</h2>
         <p class="text-gray-600 mb-12 leading-relaxed">
-          这个博客创建于2023年，主要分享以下内容：
+          这个博格创建于2025年，主要分享以下内容：
         </p>
       </div>
       

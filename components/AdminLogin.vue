@@ -9,10 +9,7 @@
         <h2>网站管理控制端</h2>
       </div>
       
-      <div v-if="error" class="error-message">
-        <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
-        {{ error }}
-      </div>
+      <!-- 错误提示将通过弹窗显示 -->
       
       <div class="form-group">
         <label for="username">用户名</label>
@@ -56,9 +53,7 @@
         {{ isLoading ? '登录中...' : '登录' }}
       </button>
       
-      <div class="login-footer">
-        <span class="hint">提示：默认账号密码均为 admin</span>
-      </div>
+      <!-- 非管理员用户权限提示将通过弹窗显示 -->
     </div>
   </div>
 </template>
@@ -71,38 +66,95 @@ export default {
       username: '',
       password: '',
       isLoading: false,
-      error: '',
       focusedField: ''
     }
   },
+  mounted() {
+    // 检查用户是否已登录为管理员
+    const adminLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+    
+    if (adminLoggedIn) {
+      this.$router.push('/admin/dashboard');
+    }
+    
+    // 检查当前登录用户是否为普通用户，并且仅在showPermissionAlert为true时才显示提示
+    // 移除hasShownPermissionAlert检查，确保每次进入都显示提示
+    const userLoggedIn = localStorage.getItem('userLoggedIn') === 'true';
+    
+    if (userLoggedIn && this.showPermissionAlert) {
+      setTimeout(() => {
+        alert('你没有管理权限');
+      }, 500);
+    }
+  },
+  props: {
+    // 允许从父组件传入showPermissionAlert属性来控制是否显示权限提示
+    showPermissionAlert: {
+      type: Boolean,
+      default: true
+    }
+  },
   methods: {
-    handleEscape() {
-      // 允许用户按ESC键清除错误信息
-      this.error = '';
-    },
     async handleLogin() {
       // 简单的表单验证
       if (!this.username || !this.password) {
-        this.error = '请输入用户名和密码';
+        alert('请输入用户名和密码');
         return;
       }
 
       this.isLoading = true;
-      this.error = '';
 
       try {
-        // 实际项目中应该调用后端API进行身份验证
-        // 这里使用模拟验证（admin/admin）
-        if (this.username === 'admin' && this.password === 'admin') {
-          // 保存登录状态到localStorage
-          localStorage.setItem('adminLoggedIn', 'true');
-          // 重定向到管理页面
-          this.$emit('login-success');
-        } else {
-          throw new Error('用户名或密码错误');
-        }
+          // 实际项目中应该调用后端API进行身份验证
+          // 这里从localStorage加载用户列表进行身份验证
+          let isValid = false;
+          let role = '';
+          
+          // 从localStorage加载用户列表
+          const storedUsers = localStorage.getItem('adminUsers');
+          let users = [];
+          
+          if (storedUsers) {
+            try {
+              users = JSON.parse(storedUsers);
+            } catch (error) {
+              console.error('解析用户列表失败:', error);
+            }
+          }
+          
+          // 如果localStorage中没有用户列表，使用默认用户
+          if (users.length === 0) {
+            users = [
+              { username: 'superadmin', role: 'super_admin' },
+              { username: 'admin', role: 'admin' }
+            ];
+          }
+          
+          // 查找用户并验证密码
+          const user = users.find(u => u.username === this.username);
+          if (user) {
+            // 获取用户密码（在实际项目中应该从后端验证）
+            // 这里简化处理，默认密码为'admin'或从localStorage获取的密码
+            const userPassword = localStorage.getItem(`password_${user.username}`) || 'admin';
+            
+            if (this.password === userPassword) {
+              isValid = true;
+              role = user.role;
+            }
+          }
+          
+          if (isValid) {
+            // 保存登录状态和角色信息到localStorage
+            localStorage.setItem('adminLoggedIn', 'true');
+            localStorage.setItem('adminRole', role);
+            localStorage.setItem('adminUsername', this.username);
+            // 通知父组件登录成功
+            this.$emit('login-success');
+          } else {
+            throw new Error('用户名或密码错误');
+          }
       } catch (err) {
-        this.error = err.message || '登录失败，请重试';
+        alert(err.message || '登录失败，请重试');
       } finally {
         this.isLoading = false;
       }
@@ -289,21 +341,6 @@ export default {
   display: block;
 }
 
-.error-message {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  padding: 12px 15px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  text-align: center;
-  border: 1px solid #fecaca;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  animation: shake 0.5s ease-in-out;
-}
-
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -313,12 +350,6 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
 /* 响应式设计 */

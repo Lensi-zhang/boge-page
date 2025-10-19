@@ -9,10 +9,10 @@
           </a>
           
           <div class="flex gap-6">
-            <a href="#about" class="text-gray-300 hover:text-white transition-custom">关于我</a>
-            <a href="#blog" class="text-gray-300 hover:text-white transition-custom">博客简介</a>
+            <a href="#about" class="text-gray-300 hover:text-white transition-custom">关于开发者</a>
+            <a href="#blog" class="text-gray-300 hover:text-white transition-custom">博格简介</a>
             <a href="#articles" class="text-gray-300 hover:text-white transition-custom">文章</a>
-            <a href="#contact" class="text-gray-300 hover:text-white transition-custom">联系我</a>
+            <a href="#contact" class="text-gray-300 hover:text-white transition-custom">联系开发者</a>
           </div>
         </div>
         

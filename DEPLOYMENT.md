@@ -1,6 +1,6 @@
-# 博客项目部署指南
+# 博格项目部署指南
 
-本指南将帮助您在Termux服务器上使用Nginx部署博客项目。
+本指南将帮助您在Termux服务器上使用Nginx部署博格项目。
 
 ## 1. 准备工作
 
@@ -93,7 +93,7 @@ chmod 775 backend/uploads
 ### 4.1 创建 Nginx 配置文件
 
 ```bash
-nano ~/../usr/local/nginx/conf/conf.d/blog.conf
+nano ~/../usr/local/nginx/conf/conf.d/boge.conf
 ```
 
 添加以下配置：
@@ -105,7 +105,7 @@ server {
 
     # 前端静态文件
     location / {
-        root /path/to/boge-blog/dist;
+        root /path/to/boge/dist;
         index index.html;
         try_files $uri $uri/ /index.html;
     }
@@ -163,7 +163,7 @@ pm list
 ## 6. 测试部署
 
 在浏览器中访问：
-- 博客首页：http://服务器IP
+- 博格首页：http://服务器IP
 - API 接口：http://服务器IP/api/articles
 
 ## 7. 常见问题处理

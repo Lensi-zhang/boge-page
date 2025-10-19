@@ -3,7 +3,7 @@
     <div class="container mx-auto px-4">
       <div class="max-w-6xl mx-auto">
         <h2 class="text-[clamp(1.8rem,3vw,2.5rem)] font-bold text-center mb-16 relative">
-          <span class="relative z-10">关于我</span>
+          <span class="relative z-10">关于开发者</span>
           <span class="absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-3 bg-primary/20 -z-10 rounded-full"></span>
         </h2>
         
@@ -29,8 +29,8 @@
               一名热爱技术与写作的软件工程师，对Web技术、用户体验和交互设计有着浓厚的兴趣。
             </p>
             <p class="text-gray-600 mb-6 leading-relaxed">
-              这个博客是记录学习心得、分享技术见解和生活感悟的地方。
-            </p>
+                这个博格是记录学习心得、分享技术见解和生活感悟的地方。
+              </p>
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@ export default {
   name: 'About',
   data() {
     return {
-      greeting: '你好，我是博主',
+      greeting: '你好，我是开发者',
       avatarUrl: 'https://p3-passport.byteacctimg.com/img/user-avatar/52550b01fd44b51170eaae83e3bdba5c~120x120.awebp'
     }
   }

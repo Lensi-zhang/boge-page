@@ -93,9 +93,9 @@ const initMariaDB = async () => {
     if (navItems.length === 0) {
       const defaultNavItems = [
         { title: '首页', path: '/', icon: 'home', orderNum: 1, isActive: true },
-        { title: '博客', path: '/blog', icon: 'article', orderNum: 2, isActive: true },
+        { title: '博格', path: '/blog', icon: 'article', orderNum: 2, isActive: true },
         { title: '关于', path: '/about', icon: 'info', orderNum: 3, isActive: true },
-        { title: '联系我们', path: '/contact', icon: 'message', orderNum: 4, isActive: true }
+        { title: '联系开发者', path: '/contact', icon: 'message', orderNum: 4, isActive: true }
       ];
       
       for (const item of defaultNavItems) {
@@ -113,10 +113,10 @@ const initMariaDB = async () => {
       await connection.query(
         'INSERT INTO articles (title, content, category, tags, cover, status, viewCount, authorId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
-          '欢迎来到我的博客',
-          '<h2>这是第一篇博客文章</h2><p>欢迎访问我的个人博客网站！这里将分享我的技术学习心得和项目经验。</p>',
+          '欢迎来到我的博格',
+          '<h2>这是第一篇博格文章</h2><p>欢迎访问博格网站！这里将分享技术学习心得和项目经验。</p>',
           '公告',
-          JSON.stringify(['博客', '欢迎', '介绍']),
+          JSON.stringify(['博格', '欢迎', '介绍']),
           '',
           'published',
           120,
