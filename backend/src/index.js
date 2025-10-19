@@ -3,7 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import path from 'path';
-import routes from './routes/index.js';
+import userRoutes from './routes/userRoutes.js';
+import mariaArticleRoutes from './routes/mariaArticleRoutes.js';
+import navigationRoutes from './routes/navigationRoutes.js';
 
 // 加载环境变量
 dotenv.config();
@@ -79,16 +81,15 @@ const mockNavigation = [
   }
 ];
 
-// 尝试连接数据库（如果失败，继续运行但使用模拟数据）
+// 初始化MariaDB连接
 let useMockData = false;
 try {
-  // 动态导入数据库连接模块
-  const connectDBModule = await import('./config/db.js');
-  const connectDB = connectDBModule.default;
-  await connectDB();
-  console.log('MongoDB connected successfully');
+  // 导入MariaDB配置并进行测试连接
+  const { testConnection } = await import('./config/mariaDB.js');
+  await testConnection();
+  console.log('MariaDB connected successfully');
 } catch (error) {
-  console.warn('MongoDB connection failed, running with mock data:', error.message);
+  console.warn('MariaDB connection failed:', error.message);
   useMockData = true;
 }
 
@@ -107,16 +108,11 @@ if (process.env.NODE_ENV === 'development') {
 // 静态文件服务
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// API路由配置
-if (!useMockData) {
-  try {
-    // 尝试使用真实路由
-    app.use('/api', routes);
-  } catch (error) {
-    console.warn('Failed to load real routes, switching to mock routes:', error.message);
-    useMockData = true;
-  }
-}
+// API路由配置（使用MariaDB版本）
+app.use('/api/users', userRoutes);
+app.use('/api/articles', mariaArticleRoutes);
+app.use('/api/navigation', navigationRoutes);
+useMockData = false; // 强制使用真实路由
 
 // 如果需要使用模拟数据
 if (useMockData) {

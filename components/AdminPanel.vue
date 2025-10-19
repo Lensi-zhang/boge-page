@@ -333,31 +333,13 @@ export default {
     async fetchArticles() {
       this.isLoadingArticles = true;
       try {
-        // 实际项目中应该调用后端API获取文章列表
-        // 这里使用模拟数据
-        // const response = await fetch('/api/articles');
-        // if (!response.ok) throw new Error('获取文章失败');
-        // this.articles = await response.json();
-        
-        // 模拟数据
-        this.articles = [
-          {
-            id: 1,
-            title: 'Vue 3 新特性介绍',
-            category: '技术',
-            summary: '探索Vue 3带来的Composition API、Teleport等新特性',
-            content: 'Vue 3是Vue.js框架重大更新...',
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 2,
-            title: '前端性能优化实践',
-            category: '教程',
-            summary: '分享一些实用的前端性能优化技巧',
-            content: '性能优化是前端开发中的重要话题...',
-            createdAt: new Date(Date.now() - 86400000).toISOString()
-          }
-        ];
+        // 调用后端API获取文章列表
+        const response = await fetch('/api/articles');
+        if (!response.ok) throw new Error('获取文章失败');
+        const data = await response.json();
+        // 确保获取到的是数组格式
+        this.articles = Array.isArray(data) ? data : (data.articles || []);
+        console.log('获取文章列表成功:', this.articles);
       } catch (error) {
         console.error('获取文章失败:', error);
       } finally {
@@ -370,25 +352,27 @@ export default {
       this.articleMessage = '';
       
       try {
-        // 实际项目中应该调用后端API提交文章
-        // const response = await fetch('/api/articles', {
-        //   method: 'POST',
-        //   headers: {
-        //     'Content-Type': 'application/json'
-        //   },
-        //   body: JSON.stringify(this.newArticle)
-        // });
-        // if (!response.ok) throw new Error('上传文章失败');
-        // const createdArticle = await response.json();
+        // 调用后端API提交文章
+        const response = await fetch('/api/articles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(this.newArticle)
+        });
         
-        // 模拟添加到列表
-        const createdArticle = {
-          id: Date.now(),
-          ...this.newArticle,
-          createdAt: new Date().toISOString()
-        };
+        if (!response.ok) {
+          throw new Error(`HTTP错误! 状态码: ${response.status}`);
+        }
         
-        this.articles.unshift(createdArticle);
+        const createdArticle = await response.json();
+        console.log('文章提交成功:', createdArticle);
+        
+        this.articles.unshift({
+          ...createdArticle,
+          createdAt: createdArticle.createdAt || new Date().toISOString(),
+          updatedAt: createdArticle.updatedAt || new Date().toISOString()
+        });
         
         // 重置表单
         this.newArticle = {
@@ -404,7 +388,7 @@ export default {
         // 触发文章更新事件
         this.$emit('article-created', createdArticle);
       } catch (error) {
-        this.articleMessage = '上传失败，请重试';
+        this.articleMessage = `上传失败，请重试: ${error.message}`;
         this.articleMessageType = 'error';
         console.error('上传文章失败:', error);
       } finally {
@@ -431,13 +415,13 @@ export default {
       if (!confirm('确定要删除这篇文章吗？')) return;
       
       try {
-        // 实际项目中应该调用后端API删除文章
-        // const response = await fetch(`/api/articles/${articleId}`, {
-        //   method: 'DELETE'
-        // });
-        // if (!response.ok) throw new Error('删除文章失败');
+        // 调用后端API删除文章
+        const response = await fetch(`/api/articles/${articleId}`, {
+          method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('删除文章失败');
         
-        // 模拟删除
+        // 删除成功后，更新前端状态
         this.articles = this.articles.filter(article => article.id !== articleId);
         
         this.articleMessage = '文章删除成功';

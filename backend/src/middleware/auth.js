@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { query } from '../config/mariaDB.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -11,10 +11,16 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       
       // 验证token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
       
-      // 获取用户信息但不包含密码
-      req.user = await User.findById(decoded.id).select('-password');
+      // 使用MariaDB查询获取用户信息，不包含密码
+        const [users] = await query('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id]);
+      
+      if (users.length === 0) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+      
+      req.user = users[0];
       
       next();
     } catch (error) {
