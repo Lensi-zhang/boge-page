@@ -111,12 +111,27 @@ export async function refreshApiBaseUrl() {
  * 构建完整的API请求URL
  * @param {string} endpoint API端点路径，如 '/api/articles'
  * @returns {Promise<string>} 完整的API请求URL
- */
+ */// 获取当前API基础URL
+export async function getBaseUrl() {
+  console.log('调用getBaseUrl函数获取当前API基础URL');
+  return await getApiBaseUrl();
+}
+
+// 构建完整的API URL
 export async function buildApiUrl(endpoint) {
   const baseUrl = await getApiBaseUrl();
-  // 确保路径正确连接
+  // 确保endpoint以/开头
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${baseUrl}${normalizedEndpoint}`;
+}
+
+/**
+ * 强制刷新API基础URL
+ * @returns {Promise<string>} 新的API基础URL
+ */
+export async function forceRefreshApiBaseUrl() {
+  console.log('手动刷新API基础URL...');
+  return await getApiBaseUrl(true);
 }
 
 /**
