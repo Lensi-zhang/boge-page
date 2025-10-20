@@ -13,35 +13,52 @@ const UPDATE_INTERVAL = 60 * 60 * 1000; // 60分钟
  */
 export async function fetchCpolarPublicUrl() {
   try {
-    // 访问cpolar的API来获取隧道信息
-    // cpolar默认提供了一个本地API在http://localhost:4040/api/tunnels
-    const response = await fetch('http://localhost:4040/api/tunnels');
+    // 尝试从cpolar Web界面获取公网地址
+    const response = await fetch('http://localhost:4040/');
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch cpolar tunnels: ${response.status}`);
+      console.warn(`无法访问cpolar界面: ${response.status}`);
+      return getDefaultBaseUrl();
     }
     
-    const data = await response.json();
+    // 由于cpolar返回HTML而非JSON，我们需要解析HTML来查找公网地址
+    const htmlContent = await response.text();
     
-    // 查找映射到端口3000的隧道
-    if (data.tunnels && data.tunnels.length > 0) {
-      // 假设第一个隧道是我们需要的，或者根据端口过滤
-      const tunnel = data.tunnels.find(t => 
-        t.config && t.config.addr && t.config.addr.includes(':3000')
-      ) || data.tunnels[0];
-      
-      if (tunnel && tunnel.public_url) {
-        console.log('获取到cpolar公网地址:', tunnel.public_url);
-        return tunnel.public_url;
-      }
+    // 尝试使用正则表达式查找公网地址
+    // 匹配类似 https://xxxx.cpolar.io 的URL
+    const urlRegex = /https?:\/\/[a-zA-Z0-9-]+\.cpolar\.(io|cn)/g;
+    const matches = htmlContent.match(urlRegex);
+    
+    if (matches && matches.length > 0) {
+      // 去重并返回第一个匹配的URL
+      const uniqueUrls = [...new Set(matches)];
+      console.log('获取到cpolar公网地址:', uniqueUrls[0]);
+      return uniqueUrls[0];
     }
     
-    throw new Error('未找到有效的cpolar隧道信息');
+    console.warn('未在cpolar界面找到公网地址');
+    return getDefaultBaseUrl();
   } catch (error) {
     console.error('获取cpolar公网地址失败:', error);
-    // 如果无法从cpolar API获取，使用默认的本地地址作为备选
+    return getDefaultBaseUrl();
+  }
+}
+
+/**
+ * 获取默认的基础URL
+ * @returns {string} 默认的基础URL
+ */
+function getDefaultBaseUrl() {
+  // 检查是否是开发环境
+  if (process.env.NODE_ENV === 'development' || 
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1') {
     return 'http://localhost:3000';
   }
+  
+  // 生产环境使用备选方案 - 可以在这里配置备用地址
+  console.warn('使用备选后端地址');
+  return 'http://localhost:3000';
 }
 
 /**
