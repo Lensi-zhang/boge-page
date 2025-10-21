@@ -210,10 +210,17 @@ export default {
   mounted() {
     // 添加点击外部区域关闭下拉菜单的功能
     this.handleClickOutside = (event) => {
-      // 检查点击的元素是否在用户菜单或触发器内
-      const userMenuWrapper = this.$el.querySelector('.user-menu-wrapper');
-      if (userMenuWrapper && !userMenuWrapper.contains(event.target) && this.userMenuOpen) {
-        this.userMenuOpen = false;
+      // 确保组件实例存在且有$el属性
+      if (!this.$el) return;
+      
+      try {
+        // 检查点击的元素是否在用户菜单或触发器内
+        const userMenuWrapper = this.$el.querySelector('.user-menu-wrapper');
+        if (userMenuWrapper && !userMenuWrapper.contains(event.target) && this.userMenuOpen) {
+          this.userMenuOpen = false;
+        }
+      } catch (error) {
+        console.warn('Error in handleClickOutside:', error);
       }
     };
     

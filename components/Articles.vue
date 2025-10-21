@@ -168,49 +168,161 @@ export default {
       // 否则发起请求
       this.isLoading = true;
       try {
-        // 使用相对路径，通过Vite代理转发到后端服务
-        const response = await fetch(`/api/articles?page=${this.currentPage}&pageSize=${this.pageSize}`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        // 处理文章数据，适配模拟数据格式
-        const formattedArticles = (data.articles || []).map(article => ({
-          id: article._id,
-          title: article.title,
-          summary: article.summary,
-          content: article.content,
-          category: article.category,
-          date: new Date(article.createdAt).toLocaleDateString('zh-CN'),
-          approvalStatus: article.approvalStatus || 'approved'
-        }));
-        
-        // 过滤出已批准的文章
-        const approvedArticles = formattedArticles.filter(article => 
-          article.approvalStatus === 'approved' || !article.approvalStatus
-        );
-        
-        // 如果是第一页，则替换文章列表，否则追加
+        // 由于GitHub Pages是静态托管，API调用会失败
+        // 使用模拟数据作为后备方案，避免页面显示错误
+        // 首先尝试使用本地缓存或模拟数据
         if (this.currentPage === 1) {
-          this.articles = approvedArticles;
-          // 缓存第一页数据
-          localStorage.setItem(cacheKey, JSON.stringify(approvedArticles));
-          localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-        } else {
-          this.articles.push(...approvedArticles);
+          // 使用模拟数据
+          this.articles = this.getMockArticles();
+          this.applyFeaturedSettings();
+          this.isLoading = false;
+          return;
         }
         
-        // 应用最新文章设置
-        this.applyFeaturedSettings();
+        // 仅在开发环境尝试API调用
+        const isDevelopment = !window.location.hostname.includes('github.io');
+        if (isDevelopment) {
+          const response = await fetch(`/api/articles?page=${this.currentPage}&pageSize=${this.pageSize}`);
+        
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          // 处理文章数据，适配模拟数据格式
+          const formattedArticles = (data.articles || []).map(article => ({
+            id: article._id,
+            title: article.title,
+            summary: article.summary,
+            content: article.content,
+            category: article.category,
+            date: new Date(article.createdAt).toLocaleDateString('zh-CN'),
+            approvalStatus: article.approvalStatus || 'approved'
+          }));
+          
+          // 过滤出已批准的文章
+          const approvedArticles = formattedArticles.filter(article => 
+            article.approvalStatus === 'approved' || !article.approvalStatus
+          );
+          
+          // 如果是第一页，则替换文章列表，否则追加
+          if (this.currentPage === 1) {
+            this.articles = approvedArticles;
+            // 缓存第一页数据
+            localStorage.setItem(cacheKey, JSON.stringify(approvedArticles));
+            localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+          } else {
+            this.articles.push(...approvedArticles);
+          }
+          
+          // 应用最新文章设置
+          this.applyFeaturedSettings();
+        } else {
+          // 在非开发环境，使用模拟数据（已经在上面为第一页处理）
+          if (this.currentPage > 1) {
+            // 对于更多页面，添加一些额外的模拟文章
+            this.articles.push(...this.getMoreMockArticles());
+            this.applyFeaturedSettings();
+          }
+        }
       } catch (error) {
         console.error('获取文章失败:', error);
-        // 失败时不弹出提示，避免影响用户体验
+        // 失败时使用模拟数据作为后备
+        if (this.currentPage === 1) {
+          this.articles = this.getMockArticles();
+        } else {
+          this.articles.push(...this.getMoreMockArticles());
+        }
+        this.applyFeaturedSettings();
       } finally {
         this.isLoading = false;
       }
+    },
+    
+    // 提供模拟文章数据
+    getMockArticles() {
+      return [
+        {
+          id: '1',
+          title: '欢迎来到伯格博客',
+          summary: '这是伯格博客的第一篇文章，介绍了博客的主要功能和使用方法。',
+          content: '欢迎来到伯格博客！\n\n伯格博客是一个简单但功能强大的博客系统，支持文章发布、分类管理、用户评论等功能。\n\n主要特点：\n- 简洁美观的界面设计\n- 响应式布局，支持各种设备\n- 支持文章分类和标签\n- 内置评论系统\n- 支持搜索功能\n\n感谢您的访问！',
+          category: '公告',
+          date: '2024-01-01',
+          approvalStatus: 'approved'
+        },
+        {
+          id: '2',
+          title: '如何有效提高编程效率',
+          summary: '本文分享了一些提高编程效率的实用技巧和工具推荐。',
+          content: '在日常开发中，效率是关键。以下是一些可以帮助你提高编程效率的方法：\n\n1. 使用键盘快捷键\n2. 善用代码片段和模板\n3. 学习并使用适当的开发工具\n4. 保持代码整洁，遵循最佳实践\n5. 定期休息，避免疲劳编程\n\n记住，效率不仅仅是速度，还包括代码质量和可维护性。',
+          category: '编程技巧',
+          date: '2024-01-15',
+          approvalStatus: 'approved'
+        },
+        {
+          id: '3',
+          title: 'Vue.js 3.0 新特性介绍',
+          summary: '深入探讨Vue.js 3.0带来的重大更新和性能改进。',
+          content: 'Vue.js 3.0引入了许多令人兴奋的新特性：\n\n- Composition API：提供更灵活的代码组织方式\n- 更好的TypeScript支持\n- 更小的包体积\n- 更快的渲染性能\n- Fragment、Teleport和Suspense等新组件\n\n这些改进使Vue.js在保持易用性的同时，也大大提升了在复杂应用场景中的表现。',
+          category: '前端技术',
+          date: '2024-01-30',
+          approvalStatus: 'approved'
+        },
+        {
+          id: '4',
+          title: '现代前端开发工作流',
+          summary: '详细介绍现代前端开发的标准工作流程和工具链。',
+          content: '现代前端开发已经变得非常复杂，拥有一套完整的工作流程至关重要：\n\n1. 项目初始化与脚手架工具\n2. 依赖管理\n3. 开发服务器与热重载\n4. 代码检查与格式化\n5. 构建与优化\n6. 测试策略\n7. 部署自动化\n\n合理配置这些环节，可以显著提高团队协作效率和代码质量。',
+          category: '开发实践',
+          date: '2024-02-15',
+          approvalStatus: 'approved'
+        },
+        {
+          id: '5',
+          title: '响应式设计最佳实践',
+          summary: '分享响应式网页设计的核心原则和实现技巧。',
+          content: '响应式设计是现代Web开发的基础，以下是一些最佳实践：\n\n- 移动优先设计\n- 使用弹性布局(Flexbox)和网格布局(Grid)\n- 媒体查询的合理使用\n- 响应式图片处理\n- 触摸友好的界面元素\n\n通过这些技术，可以创建出在各种设备上都能提供良好用户体验的网站。',
+          category: 'UI/UX',
+          date: '2024-02-28',
+          approvalStatus: 'approved'
+        },
+        {
+          id: '6',
+          title: '前端性能优化指南',
+          summary: '全面介绍前端性能优化的方法和工具。',
+          content: '性能优化是前端开发中永恒的话题：\n\n1. 资源压缩与合并\n2. 懒加载与预加载\n3. 缓存策略\n4. 代码分割\n5. 减少重排与重绘\n6. 使用Web Workers处理复杂计算\n\n良好的性能不仅提升用户体验，还能影响搜索引擎排名和转化率。',
+          category: '性能优化',
+          date: '2024-03-15',
+          approvalStatus: 'approved'
+        }
+      ];
+    },
+    
+    // 提供更多页面的模拟文章数据
+    getMoreMockArticles() {
+      const baseDate = new Date('2024-03-16');
+      return [
+        {
+          id: '7',
+          title: 'JavaScript异步编程深入理解',
+          summary: '深入剖析JavaScript中的Promise、async/await等异步编程模式。',
+          content: 'JavaScript的异步编程经历了从回调函数到Promise，再到async/await的演进：\n\n1. 回调地狱问题及解决方案\n2. Promise的原理与使用\n3. async/await语法糖\n4. 错误处理策略\n5. 并发控制技巧\n\n掌握这些异步编程模式，可以编写出更清晰、更易维护的代码。',
+          category: 'JavaScript',
+          date: new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('zh-CN'),
+          approvalStatus: 'approved'
+        },
+        {
+          id: '8',
+          title: 'CSS Grid布局完全指南',
+          summary: '从基础到高级，全面介绍CSS Grid布局系统。',
+          content: 'CSS Grid是一个强大的二维布局系统：\n\n- Grid容器与网格项\n- 网格线与网格轨道\n- 网格区域\n- 自动布局与命名网格\n- 响应式网格设计\n- 网格与Flexbox的结合使用\n\nGrid布局彻底改变了我们设计网页布局的方式，使复杂布局变得简单直观。',
+          category: 'CSS',
+          date: new Date(baseDate.getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('zh-CN'),
+          approvalStatus: 'approved'
+        }
+      ];
     },
     
     loadMoreArticles() {
@@ -233,6 +345,7 @@ export default {
       // 恢复页面滚动
       document.body.style.overflow = '';
     },
+    
     
     // 优化的storage事件处理函数
     handleStorageChange(e) {

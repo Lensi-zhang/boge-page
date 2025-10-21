@@ -42,6 +42,11 @@
             <span class="nav-icon">👥</span>
             <span>用户管理</span>
           </li>
+          <!-- 服务器设置 - 仅超级管理员可见 -->
+          <li v-if="isSuperAdmin" :class="{ active: activeTab === 'serverSettings' }" @click="activeTab = 'serverSettings'">
+            <span class="nav-icon">⚙️</span>
+            <span>服务器设置</span>
+          </li>
         </ul>
       </div>
 
@@ -108,11 +113,11 @@
               </div>
               
               <div v-else class="approval-articles-grid">
-                <div v-for="article in filteredApprovalArticles" :key="article.id" class="approval-article-item" :class="{ 
-                  'status-pending': article.approvalStatus === 'pending',
-                  'status-approved': article.approvalStatus === 'approved',
-                  'status-rejected': article.approvalStatus === 'rejected'
-                }">
+                <div v-for="article in filteredApprovalArticles" :key="article.id" class="approval-article-item" :class="{
+                    'status-pending': article.approvalStatus === 'pending',
+                    'status-approved': article.approvalStatus === 'approved',
+                    'status-rejected': article.approvalStatus === 'rejected'
+                  }">
                   <div class="article-header">
                     <h4 class="article-title">{{ article.title }}</h4>
                     <span class="approval-status" :class="'status-' + (article.approvalStatus || 'pending')">
@@ -275,7 +280,76 @@
           </div>
         </div>
 
-        <!-- 账户设置 - 所有用户可见，用于修改密码 -->
+        <!-- 账户设置区域 -->
+        <div v-if="activeTab === 'serverSettings'" class="tab-content">
+          <div class="section-header">
+            <h2>后端服务器地址设置</h2>
+            <p>配置后端服务器的连接地址</p>
+          </div>
+          
+          <div class="card">
+            <div class="card-body">
+              <!-- 当前活动服务器地址信息 -->
+              <div class="mb-4">
+                <h4 class="text-muted">当前活动的服务器地址</h4>
+                <p class="text-lg font-medium" :class="currentActiveServerUrl.includes('localhost') ? 'text-warning' : 'text-success'">
+                  {{ currentActiveServerUrl || '未设置' }}
+                </p>
+                <small class="text-muted">此地址是当前系统正在使用的后端服务器地址</small>
+              </div>
+              
+              <!-- 服务器地址设置表单 -->
+              <div class="form-group">
+                <label for="backendUrl" class="font-medium mb-2">后端服务器地址</label>
+                <input 
+                  type="text" 
+                  id="backendUrl" 
+                  v-model="serverSettings.backendUrl" 
+                  class="form-control w-full" 
+                  placeholder="输入后端服务器地址，例如 http://localhost:3000 或 https://your-server.com"
+                />
+                <small class="form-text text-muted mt-1">请确保地址以 http:// 或 https:// 开头，并包含正确的端口号</small>
+              </div>
+              
+              <!-- 操作按钮 -->
+              <div class="action-buttons mt-4" style="display: flex; gap: 8px;">
+                <button 
+                  @click="testServerConnection" 
+                  class="btn"
+                  :disabled="!serverSettings.backendUrl"
+                  style="padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.3s ease; background-color: #28a745; color: white;"
+                  :style="{ cursor: !serverSettings.backendUrl ? 'not-allowed' : 'pointer', opacity: !serverSettings.backendUrl ? 0.6 : 1 }"
+                  @mouseenter="$event.target.style.transform = 'translateY(-2px)'; $event.target.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';"
+                  @mouseleave="$event.target.style.transform = ''; $event.target.style.boxShadow = '';"
+                >
+                  测试连接
+                </button>
+                <button 
+                  @click="saveServerSettings" 
+                  class="btn"
+                  :disabled="!serverSettings.backendUrl || isSaving"
+                  style="padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.3s ease; background-color: #28a745; color: white;"
+                  :style="{ cursor: (!serverSettings.backendUrl || isSaving) ? 'not-allowed' : 'pointer', opacity: (!serverSettings.backendUrl || isSaving) ? 0.6 : 1 }"
+                  @mouseenter="$event.target.style.transform = 'translateY(-2px)'; $event.target.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';"
+                  @mouseleave="$event.target.style.transform = ''; $event.target.style.boxShadow = '';"
+                >
+                  {{ isSaving ? '保存中...' : '保存设置' }}
+                </button>
+              </div>
+              
+              <!-- 消息提示 -->
+              <div 
+                v-if="serverMessage" 
+                class="save-message" 
+                :class="saveMessageType"
+              >
+                {{ serverMessage }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 账户设置区域 -->
         <div v-if="activeTab === 'adminSettings'" class="tab-content">
           <div class="section-header">
               <h2>账户设置</h2>
@@ -381,6 +455,8 @@
 </template>
 
 <script>
+import { setBackendServerUrl, getBackendServerUrl, forceRefreshApiBaseUrl } from './utils/apiUtils.js';
+
 export default {
   name: 'AdminPanel',
   data() {
@@ -433,8 +509,15 @@ export default {
       // 文章审批相关
       approvalFilter: 'pending',
       approvalMessage: '',
-      approvalMessageType: ''
-    };
+      approvalMessageType: '',
+      // 服务器设置相关
+      serverSettings: {
+        backendUrl: ''
+      },
+      currentActiveServerUrl: '',
+      serverMessage: '',
+      serverMessageType: ''
+    }
   },
   computed: {
     filteredArticles() {
@@ -479,9 +562,10 @@ export default {
     this.fetchArticles();
     this.loadFeaturedSettings();
     
-    // 加载用户列表
+    // 加载用户列表和服务器设置
     if (this.isSuperAdmin) {
       this.loadUsersFromStorage();
+      this.loadServerSettings();
     }
   },
   methods: {
@@ -490,8 +574,8 @@ export default {
       localStorage.removeItem('adminLoggedIn');
       localStorage.removeItem('adminRole');
       localStorage.removeItem('adminUsername');
-      // 重定向到登录页面（使用window.location替代$router，避免路由未定义错误）
-      window.location.href = '/admin-login';
+      // 通知父组件处理退出逻辑
+      this.$emit('logout');
     },
     
     // 密码更新相关方法
@@ -596,25 +680,26 @@ export default {
         this.users = this.users.filter(user => user.username !== username);
         
         // 更新管理员用户存储
-        const adminUsers = this.users.filter(u => u.role === 'admin' || u.role === 'super_admin');
-        localStorage.setItem('adminUsers', JSON.stringify(adminUsers));
-        
-        // 如果是普通用户，从普通用户存储中删除
-        if (userRole === 'user') {
-          const normalUsers = localStorage.getItem('normalUsers');
-          if (normalUsers) {
-            const parsedNormalUsers = JSON.parse(normalUsers).filter(u => u.username !== username);
-            localStorage.setItem('normalUsers', JSON.stringify(parsedNormalUsers));
-          }
+          const adminUsers = this.users.filter(u => u.role === 'admin' || u.role === 'super_admin');
+          localStorage.setItem('adminUsers', JSON.stringify(adminUsers));
         }
-        
-        // 删除用户密码
-        localStorage.removeItem(`password_${username}`);
-        
-        this.userMessage = '用户删除成功';
-        setTimeout(() => {
-          this.userMessage = '';
-        }, 2000);
+      },
+      
+      // 服务器设置相关方法
+    loadServerSettings() {
+      // 从API工具获取当前配置的服务器地址
+      this.serverSettings.backendUrl = getBackendServerUrl();
+      this.updateCurrentActiveUrl();
+    },
+    
+    async updateCurrentActiveUrl() {
+      try {
+        // 尝试获取当前实际使用的服务器地址
+        const baseUrl = await forceRefreshApiBaseUrl();
+        this.currentActiveServerUrl = baseUrl;
+      } catch (error) {
+        this.currentActiveServerUrl = '无法获取 - 请检查连接';
+        console.error('获取当前服务器地址失败:', error);
       }
     },
     
@@ -670,8 +755,8 @@ export default {
       }
     },
     
-    async loadNavigationSettings() {
-      try {
+      async loadNavigationSettings() {
+        try {
         // 实际项目中应该从后端API获取配置
         // 这里从localStorage加载配置
         const savedSettings = localStorage.getItem('navigationSettings');
@@ -683,8 +768,8 @@ export default {
       }
     },
     
-    async loadFeaturedSettings() {
-      try {
+      async loadFeaturedSettings() {
+        try {
         // 从localStorage加载最新文章设置
         const savedSettings = localStorage.getItem('featuredArticlesSettings');
         if (savedSettings) {
@@ -694,8 +779,8 @@ export default {
         console.error('加载最新文章设置失败:', error);
       }
     },
-    
-    async saveFeaturedSettings() {
+      
+      async saveFeaturedSettings() {
       this.isSaving = true;
       this.saveMessage = '';
       
@@ -717,7 +802,7 @@ export default {
       }
     },
     
-    toggleFeaturedArticle(articleId) {
+      toggleFeaturedArticle(articleId) {
       const index = this.featuredSettings.featuredArticles.indexOf(articleId);
       if (index > -1) {
         // 如果已在列表中，移除
@@ -727,8 +812,8 @@ export default {
         this.featuredSettings.featuredArticles.push(articleId);
       }
     },
-    
-    async saveNavigationSettings() {
+      
+      async saveNavigationSettings() {
       this.isSaving = true;
       this.saveMessage = '';
       
@@ -754,7 +839,7 @@ export default {
       }
     },
     
-    toggleNavItemVisibility(itemId) {
+      toggleNavItemVisibility(itemId) {
       const item = this.navigationItems.find(i => i.id === itemId);
       if (item) {
         item.visible = !item.visible;
@@ -762,8 +847,8 @@ export default {
     },
     
     // 文章相关方法
-    async fetchArticles() {
-      try {
+      async fetchArticles() {
+        try {
         // 实际项目中应该从后端API获取文章列表
         // 这里从localStorage加载模拟数据
         const savedArticles = localStorage.getItem('articles');
@@ -780,8 +865,8 @@ export default {
         console.error('获取文章列表失败:', error);
       }
     },
-    
-    async submitArticle() {
+      
+      async submitArticle() {
       // 验证表单
       if (!this.articleForm.title || !this.articleForm.content) {
         alert('请填写标题和内容');
@@ -823,12 +908,12 @@ export default {
       }
     },
     
-    editArticle(article) {
+      editArticle(article) {
       // 在实际项目中，这里应该打开编辑对话框
       alert('编辑功能待实现');
     },
-    
-    deleteArticle(articleId) {
+      
+      deleteArticle(articleId) {
       if (confirm('确定要删除这篇文章吗？')) {
         this.articles = this.articles.filter(article => article.id !== articleId);
         // 保存到localStorage
@@ -836,8 +921,8 @@ export default {
       }
     },
     
-    // 文章审批相关方法
-    approveArticle(id) {
+      // 文章审批相关方法
+      approveArticle(id) {
       const article = this.articles.find(a => a.id === id);
       if (article) {
         article.approvalStatus = 'approved';
@@ -850,7 +935,7 @@ export default {
       }
     },
     
-    rejectArticle(id) {
+      rejectArticle(id) {
       const article = this.articles.find(a => a.id === id);
       if (article) {
         article.approvalStatus = 'rejected';
@@ -874,9 +959,86 @@ export default {
           this.approvalMessage = '';
         }, 3000);
       }
+    },
+    
+    // 测试服务器连接
+    async testServerConnection() {
+      if (!this.serverSettings.backendUrl) {
+        this.serverMessage = '请输入服务器地址';
+        this.serverMessageType = 'error';
+        setTimeout(() => {
+          this.serverMessage = '';
+        }, 3000);
+        return;
+      }
+      
+      try {
+        this.serverMessage = '正在测试连接...';
+        this.serverMessageType = 'info';
+        
+        // 尝试访问服务器健康检查端点
+        const response = await fetch(`${this.serverSettings.backendUrl}/api/health`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          this.serverMessage = '连接成功！服务器响应正常';
+          this.serverMessageType = 'success';
+          // 更新当前活动服务器地址
+          this.currentActiveServerUrl = this.serverSettings.backendUrl;
+        } else {
+          this.serverMessage = `连接失败：${response.status} ${response.statusText}`;
+          this.serverMessageType = 'error';
+        }
+      } catch (error) {
+        this.serverMessage = `连接失败：${error.message}`;
+        this.serverMessageType = 'error';
+        console.error('测试服务器连接失败:', error);
+      } finally {
+        setTimeout(() => {
+          this.serverMessage = '';
+        }, 3000);
+      }
+    },
+    
+    // 保存服务器设置
+    async saveServerSettings() {
+      if (!this.serverSettings.backendUrl) {
+        this.serverMessage = '请输入服务器地址';
+        this.serverMessageType = 'error';
+        setTimeout(() => {
+          this.serverMessage = '';
+        }, 3000);
+        return;
+      }
+      
+      try {
+        this.isSaving = true;
+        this.serverMessage = '正在保存设置...';
+        
+        // 使用apiUtils中的方法保存服务器地址
+        setBackendServerUrl(this.serverSettings.backendUrl);
+        
+        // 强制刷新API基础URL
+        await forceRefreshApiBaseUrl();
+        
+        // 更新当前活动服务器地址
+        await this.updateCurrentActiveUrl();
+        
+        this.serverMessage = '服务器设置保存成功！';
+        this.serverMessageType = 'success';
+      } catch (error) {
+        this.serverMessage = `保存失败：${error.message}`;
+        this.serverMessageType = 'error';
+        console.error('保存服务器设置失败:', error);
+      } finally {
+        this.isSaving = false;
+        setTimeout(() => {
+          this.serverMessage = '';
+        }, 3000);
+      }
     }
   }
-};
+}
 </script>
 
 <style scoped>

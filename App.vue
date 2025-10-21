@@ -45,18 +45,18 @@
 </template>
 
 <script>
-// 使用懒加载导入组件，提高初始加载速度
-const Header = () => import('./components/Header.vue')
-const Hero = () => import('./components/Hero.vue')
-const About = () => import('./components/About.vue')
-const BlogIntro = () => import('./components/BlogIntro.vue')
-const Articles = () => import('./components/Articles.vue')
-const ArticleForm = () => import('./components/ArticleForm.vue')
-const Contact = () => import('./components/Contact.vue')
-const Footer = () => import('./components/Footer.vue')
-const BackToTop = () => import('./components/BackToTop.vue')
-const AdminLogin = () => import('./components/AdminLogin.vue')
-const AdminPanel = () => import('./components/AdminPanel.vue')
+// 直接导入组件，避免Promise对象被直接渲染
+import Header from './components/Header.vue'
+import Hero from './components/Hero.vue'
+import About from './components/About.vue'
+import BlogIntro from './components/BlogIntro.vue'
+import Articles from './components/Articles.vue'
+import ArticleForm from './components/ArticleForm.vue'
+import Contact from './components/Contact.vue'
+import Footer from './components/Footer.vue'
+import BackToTop from './components/BackToTop.vue'
+import AdminLogin from './components/AdminLogin.vue'
+import AdminPanel from './components/AdminPanel.vue'
 
 export default {
   name: 'App',
@@ -160,15 +160,25 @@ export default {
       // 确保登录状态保存到localStorage（在AdminLogin.vue中已实现）
       this.showAdminLogin = false;
       this.showAdminPanel = true;
-      // 强制刷新页面以确保所有状态正确加载
-      window.location.href = '/';
+      // 移除页面刷新，直接显示管理面板
     },
     
     handleLogout() {
-      // 移除登录状态
+      // 只清除特定的登录相关信息，保留导航设置等其他数据
       localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('adminRole');
+      localStorage.removeItem('adminUsername');
+      localStorage.removeItem('userLoggedIn');
+      
+      // 显式设置状态为普通用户视图
       this.showAdminPanel = false;
       this.showAdminLogin = false;
+      
+      // 强制重新加载页面，避免Vue实例状态缓存问题
+      setTimeout(() => {
+        // 使用绝对路径进行重定向
+        window.location.href = 'https://lensi-zhang.github.io/boge-page/';
+      }, 0);
     },
     
     handleNavigationUpdated(settings) {

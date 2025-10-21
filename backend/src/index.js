@@ -96,7 +96,21 @@ try {
 const app = express();
 
 // 中间件
-app.use(cors());
+const corsOptions = {
+  origin: [
+    'https://feng-zhang.github.io',  // GitHub Pages域名
+    'http://localhost:5173',         // 开发环境本地地址
+    'http://127.0.0.1:5173',         // 另一个常见的本地地址
+    /.*\.cpolar\.io$/,              // 允许所有cpolar.io域名
+    /.*\.cpolar\.cn$/,              // 允许所有cpolar.cn域名
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,                 // 允许携带凭证
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

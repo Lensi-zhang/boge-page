@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [vue()],
   // 根目录配置
   root: process.cwd(),
-  // 基础路径
-  base: '/',
+  // 基础路径 - GitHub Pages需要使用仓库名称
+  base: '/boge-page/',
   server: {
     // 允许所有主机访问
     allowedHosts: true,

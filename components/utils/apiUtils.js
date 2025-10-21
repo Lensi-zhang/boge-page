@@ -7,53 +7,43 @@ let lastUpdateTime = 0;
 // 更新间隔（毫秒）
 const UPDATE_INTERVAL = 5 * 60 * 1000; // 临时改为5分钟，方便测试
 
-// 手动配置的cpolar地址（作为备选）
-const MANUAL_CPOLAR_URL = 'http://localhost:3000'; // 用户可以手动更新这个地址
+// 手动配置的后端服务器地址（存储在localStorage中）
+function getManualServerUrl() {
+  return localStorage.getItem('manualServerUrl') || 'http://localhost:3000';
+}
+
+function setManualServerUrl(url) {
+  localStorage.setItem('manualServerUrl', url);
+}
 
 /**
  * 从cpolar API获取最新的公网地址
  * @returns {Promise<string>} 后端API的公网地址
  */
 export async function fetchCpolarPublicUrl() {
-  console.log('开始获取cpolar公网地址...');
+  console.log('开始获取API基础地址...');
   
   try {
-    // 1. 首先尝试从cpolar Web界面获取公网地址
-    try {
-      console.log('尝试访问cpolar Web界面: http://localhost:4040/');
-      const response = await fetch('http://localhost:4040/');
-      
-      if (!response.ok) {
-        console.warn(`无法访问cpolar界面: ${response.status}`);
-      } else {
-        console.log('成功访问cpolar界面，正在解析HTML...');
-        // 由于cpolar返回HTML而非JSON，我们需要解析HTML来查找公网地址
-        const htmlContent = await response.text();
-        
-        // 尝试使用正则表达式查找公网地址
-        // 匹配类似 https://xxxx.cpolar.io 的URL
-        const urlRegex = /https?:\/\/[a-zA-Z0-9-]+\.cpolar\.(io|cn)/g;
-        const matches = htmlContent.match(urlRegex);
-        
-        if (matches && matches.length > 0) {
-          // 去重并返回第一个匹配的URL
-          const uniqueUrls = [...new Set(matches)];
-          console.log('成功获取到cpolar公网地址:', uniqueUrls[0]);
-          return uniqueUrls[0];
-        } else {
-          console.warn('未在cpolar界面找到公网地址');
-        }
-      }
-    } catch (error) {
-      console.error('访问cpolar界面失败:', error.message);
+    // 检查是否为开发环境或本地环境
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isDev = import.meta.env?.DEV === true;
+    
+    console.log('环境检测 - localhost:', isLocalhost, 'dev:', isDev);
+    
+    // 开发环境或本地环境下直接使用localhost地址，避免cpolar访问
+    if (isLocalhost || isDev) {
+      console.log('开发环境下直接使用本地地址: http://localhost:3000');
+      return 'http://localhost:3000';
     }
     
-    // 2. 如果cpolar界面访问失败，使用手动配置的地址
-    console.log('使用手动配置的cpolar地址:', MANUAL_CPOLAR_URL);
-    return MANUAL_CPOLAR_URL;
+    // 生产环境下才尝试cpolar（如果有需要）
+    // 但默认情况下，我们也优先使用手动配置的地址
+    const manualUrl = getManualServerUrl();
+    console.log('使用手动配置的服务器地址:', manualUrl);
+    return manualUrl;
     
   } catch (error) {
-    console.error('获取cpolar公网地址过程中出现严重错误:', error);
+    console.error('获取API基础地址过程中出现错误:', error);
     // 最后的备选方案
     console.log('使用本地地址作为最后的备选:', 'http://localhost:3000');
     return 'http://localhost:3000';
@@ -76,9 +66,10 @@ function getDefaultBaseUrl() {
     return 'http://localhost:3000';
   }
   
-  // 生产环境使用备选方案
-  console.log('使用生产环境备选地址:', MANUAL_CPOLAR_URL);
-  return MANUAL_CPOLAR_URL;
+  // 生产环境使用手动配置的服务器地址
+  const manualUrl = getManualServerUrl();
+  console.log('使用生产环境手动配置地址:', manualUrl);
+  return manualUrl;
 }
 
 /**
@@ -131,7 +122,29 @@ export async function buildApiUrl(endpoint) {
  */
 export async function forceRefreshApiBaseUrl() {
   console.log('手动刷新API基础URL...');
-  return await getApiBaseUrl(true);
+  currentApiBaseUrl = null; // 清除缓存，强制重新获取
+  return await getApiBaseUrl();
+}
+
+/**
+ * 设置手动配置的后端服务器地址
+ * @param {string} url 后端服务器地址
+ * @returns {string} 设置的地址
+ */
+export function setBackendServerUrl(url) {
+  console.log('设置新的后端服务器地址:', url);
+  setManualServerUrl(url);
+  // 清除当前缓存的URL，下次请求时会使用新地址
+  currentApiBaseUrl = null;
+  return url;
+}
+
+/**
+ * 获取当前手动配置的后端服务器地址
+ * @returns {string} 后端服务器地址
+ */
+export function getBackendServerUrl() {
+  return getManualServerUrl();
 }
 
 /**
