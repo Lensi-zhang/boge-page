@@ -47,8 +47,6 @@ export default defineConfig({
         manualChunks: {
           vue: ['vue']
         },
-        // 优化大文件分割
-        maxChunkSize: 500 * 1024,
         // 优化入口点
         entryFileNames: '[name].[hash].js',
         chunkFileNames: 'chunks/[name].[hash].js'

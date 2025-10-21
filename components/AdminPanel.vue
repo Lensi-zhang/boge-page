@@ -1583,12 +1583,16 @@ input:checked + .slider:before {
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
   align-self: flex-start;
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .save-btn:hover:not(:disabled) {
   background-color: #16a085;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .save-btn:disabled {
